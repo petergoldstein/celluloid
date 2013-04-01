@@ -147,7 +147,7 @@ module Celluloid
   module ClassMethods
     # Create a new actor
     def new(*args, &block)
-      proxy = Actor.new(allocate, actor_options).proxy
+      proxy = CellBehaviour.new(actor_options.merge(:subject => allocate)).proxy
       proxy._send_(:initialize, *args, &block)
       proxy
     end
@@ -157,7 +157,7 @@ module Celluloid
     def new_link(*args, &block)
       raise NotActorError, "can't link outside actor context" unless Celluloid.actor?
 
-      proxy = Actor.new(allocate, actor_options).proxy
+      proxy = CellBehaviour.new(actor_options.merge(:subject => allocate)).proxy
       Actor.link(proxy)
       proxy._send_(:initialize, *args, &block)
       proxy
@@ -235,7 +235,7 @@ module Celluloid
       elsif superclass.respond_to? :proxy_class
         superclass.proxy_class
       else
-        Celluloid::ActorProxy
+        Celluloid::CellProxy
       end
     end
 
@@ -355,7 +355,7 @@ module Celluloid
       if leaked?
         str << Celluloid::BARE_OBJECT_WARNING_MESSAGE
       else
-        str << "Celluloid::ActorProxy"
+        str << "Celluloid::CellProxy"
       end
 
       str << "(#{self.class}:0x#{object_id.to_s(16)})"
@@ -387,7 +387,7 @@ module Celluloid
 
   # Terminate this actor
   def terminate
-    Thread.current[:celluloid_actor].proxy.terminate!
+    Thread.current[:celluloid_actor].behavior_proxy.terminate!
   end
 
   # Send a signal with the given name to all waiting methods
@@ -517,12 +517,12 @@ module Celluloid
 
   # Handle async calls within an actor itself
   def async(meth = nil, *args, &block)
-    Thread.current[:celluloid_actor].proxy.async meth, *args, &block
+    Thread.current[:celluloid_actor].behavior_proxy.async meth, *args, &block
   end
 
   # Handle calls to future within an actor itself
   def future(meth = nil, *args, &block)
-    Thread.current[:celluloid_actor].proxy.future meth, *args, &block
+    Thread.current[:celluloid_actor].behavior_proxy.future meth, *args, &block
   end
 end
 
@@ -542,6 +542,7 @@ require 'celluloid/logger'
 require 'celluloid/mailbox'
 require 'celluloid/evented_mailbox'
 require 'celluloid/method'
+require 'celluloid/handlers'
 require 'celluloid/receivers'
 require 'celluloid/registry'
 require 'celluloid/responses'
@@ -555,12 +556,15 @@ require 'celluloid/uuid'
 
 require 'celluloid/proxies/abstract_proxy'
 require 'celluloid/proxies/sync_proxy'
+require 'celluloid/proxies/cell_proxy'
 require 'celluloid/proxies/actor_proxy'
 require 'celluloid/proxies/async_proxy'
 require 'celluloid/proxies/future_proxy'
 require 'celluloid/proxies/block_proxy'
 
 require 'celluloid/actor'
+require 'celluloid/cell_behavior'
+require 'celluloid/cell'
 require 'celluloid/future'
 require 'celluloid/pool_manager'
 require 'celluloid/supervision_group'

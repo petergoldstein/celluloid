@@ -5,9 +5,12 @@ module Celluloid
     end
 
     class ActorState
-      attr_accessor :subject_id, :subject_class, :name
+      attr_accessor :name, :id, :cell
       attr_accessor :status, :tasks
       attr_accessor :backtrace
+    end
+
+    class CellState < Struct.new(:subject_id, :subject_class)
     end
 
     class ThreadState < Struct.new(:thread_id, :backtrace)
@@ -35,8 +38,11 @@ module Celluloid
 
     def snapshot_actor(actor)
       state = ActorState.new
-      state.subject_id = actor.subject.object_id
-      state.subject_class = actor.subject.class
+      state.id = actor.object_id
+
+      if actor.behavior.is_a?(CellBehaviour)
+        state.cell = snapshot_cell(actor.behavior)
+      end
 
       tasks = actor.tasks
       if tasks.empty?
@@ -50,6 +56,13 @@ module Celluloid
       state
     end
 
+    def snapshot_cell(behavior)
+      state = CellState.new
+      state.subject_id = behavior.cell.subject.object_id
+      state.subject_class = behavior.cell.subject.class
+      state
+    end
+
     def snapshot_thread(thread)
       ThreadState.new(thread.object_id, thread.backtrace)
     end
@@ -57,7 +70,10 @@ module Celluloid
     def dump(output = STDERR)
       @actors.each do |actor|
         string = ""
-        string << "Celluloid::Actor 0x#{actor.subject_id.to_s(16)}: #{actor.subject_class}"
+        string << "Celluloid::Actor 0x#{actor.id.to_s(16)}"
+        if cell = actor.cell
+          string << " Celluloid::Cell 0x#{cell.subject_id.to_s(16)}: #{cell.subject_class}"
+        end
         string << " [#{actor.name}]" if actor.name
         string << "\n"
 

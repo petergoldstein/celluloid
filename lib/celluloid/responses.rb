@@ -10,6 +10,10 @@ module Celluloid
     def dispatch
       @call.task.resume self
     end
+
+    def copy(call)
+      self.class.new(call, @value)
+    end
   end
 
   # Call completed successfully
